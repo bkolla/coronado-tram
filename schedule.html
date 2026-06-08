@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schedule & Cart — The Coronado Tram</title>
+<link rel="stylesheet" href="style.css">
+<style>
+/* ── TABS ── */
+.page-tabs {
+  display: flex;
+  border-bottom: 2px solid var(--ink);
+  background: var(--sand);
+  gap: 0;
+}
+.page-tab {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 1rem 2rem;
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: -2px;
+}
+.page-tab:hover { color: var(--ink); }
+.page-tab.active { color: var(--rust); border-bottom-color: var(--rust); background: var(--cream); }
+
+/* ── CALENDAR ── */
+.cal-wrap {
+  border: 2px solid var(--ink);
+  background: var(--cream);
+  margin-bottom: 2.5rem;
+}
+.cal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 2px solid var(--ink);
+  background: var(--sand);
+}
+.cal-nav h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  font-weight: 900;
+}
+.cal-nav-btn {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem;
+  padding: 0.5rem 1rem;
+  background: var(--ink);
+  color: var(--cream);
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.cal-nav-btn:hover { background: var(--rust); }
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: var(--ink);
+}
+.cal-day-label {
+  background: var(--ink);
+  color: var(--gold);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: center;
+  padding: 0.6rem 0.25rem;
+}
+.cal-cell {
+  background: var(--cream);
+  min-height: 90px;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  position: relative;
+}
+.cal-cell:hover { background: var(--sand); }
+.cal-cell.empty { background: rgba(242,234,216,0.4); cursor: default; pointer-events: none; }
+.cal-cell.today { background: rgba(212,168,50,0.12); }
+.cal-cell.selected { background: rgba(196,85,26,0.08); outline: 2px solid var(--rust); outline-offset: -2px; }
+.cal-day-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  display: block;
+  margin-bottom: 0.2rem;
+  line-height: 1;
+}
+.cal-cell.today .cal-day-num { color: var(--rust); }
+.cal-evt {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.35rem;
+  margin-bottom: 0.15rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+.cal-evt.type-cart    { background: var(--rust); color: var(--cream); }
+.cal-evt.type-meeting { background: var(--sage); color: var(--cream); }
+
+/* ── DAY PANEL ── */
+.day-panel {
+  display: none;
+  border: 2px solid var(--ink);
+  background: var(--cream);
+  margin-bottom: 2.5rem;
+}
+.day-panel.open { display: block; }
+.day-panel-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 2px solid var(--ink);
+  background: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.day-panel-header h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--cream);
+}
+.day-panel-close {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.3);
+  color: var(--cream);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+}
+.day-panel-body { padding: 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+.day-events-col h4, .day-form-col h4 {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+.day-event-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1.5px solid var(--border-solid);
+  margin-bottom: 0.5rem;
+  background: var(--cream);
+}
+.day-event-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.dot-cart { background: var(--rust); }
+.dot-meeting { background: var(--sage); }
+.day-event-info { flex: 1; }
+.day-event-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  display: block;
+}
+.day-event-meta {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.day-event-delete {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: color 0.2s;
+}
+.day-event-delete:hover { color: var(--rust); }
+.type-radio-row {
+  display: flex;
+  gap: 0;
+  border: 2px solid var(--ink);
+  background: var(--ink);
+  margin-bottom: 1.25rem;
+  width: fit-content;
+}
+.type-radio {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.6rem 1.1rem;
+  background: var(--cream);
+  color: var(--muted);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.type-radio.active { background: var(--ink); color: var(--gold); }
+
+/* ── UPCOMING LIST ── */
+.upcoming-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 2px solid var(--ink);
+  background: var(--ink);
+}
+.upcoming-item {
+  background: var(--cream);
+  padding: 1.25rem 1.75rem;
+  border-bottom: 2px solid var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  transition: background 0.15s;
+  flex-wrap: wrap;
+}
+.upcoming-item:last-child { border-bottom: none; }
+.upcoming-item:hover { background: var(--sand); }
+.upcoming-date-block {
+  text-align: center;
+  min-width: 52px;
+  border-right: 1.5px solid var(--border-solid);
+  padding-right: 1.5rem;
+}
+.upd-day {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.75rem;
+  font-weight: 900;
+  color: var(--rust);
+  display: block;
+  line-height: 1;
+}
+.upd-mon {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: block;
+}
+.upcoming-info { flex: 1; }
+.upcoming-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  display: block;
+  margin-bottom: 0.2rem;
+}
+.upcoming-meta {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.upcoming-badge {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.65rem;
+}
+.badge-cart    { background: var(--rust); color: var(--cream); }
+.badge-meeting { background: var(--sage); color: var(--cream); }
+
+@media (max-width: 800px) {
+  .day-panel-body { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <nav class="nav-left">
+    <a href="index.html">Board</a>
+    <a href="travelogue.html">Travelogue</a>
+    <a href="meetings.html">Meetings</a>
+  </nav>
+  <a class="masthead-title" href="index.html">The <span>Coronado</span> Tram</a>
+  <nav class="nav-right">
+    <a href="schedule.html" class="active">Schedule & Cart</a>
+    <a href="https://www.facebook.com" target="_blank">Facebook</a>
+  </nav>
+</header>
+
+<div class="page-hero">
+  <div>
+    <div class="page-hero-label">Plan · Reserve · Show Up</div>
+    <h1>Schedule &amp; <em>Cart</em></h1>
+    <p>Book the cart for personal use or schedule a group meeting. Click any day to add an event.</p>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="page-tabs">
+  <button class="page-tab active" onclick="switchTab('calendar')">📅 Calendar</button>
+  <button class="page-tab" onclick="switchTab('cart')">🛺 Cart Reservations</button>
+  <button class="page-tab" onclick="switchTab('meetings')">📋 Meetings</button>
+</div>
+
+<!-- Calendar tab -->
+<div id="tab-calendar" class="section-wrap">
+
+  <!-- Calendar -->
+  <div class="cal-wrap">
+    <div class="cal-nav">
+      <button class="cal-nav-btn" onclick="changeMonth(-1)">← Prev</button>
+      <h3 id="cal-title"></h3>
+      <button class="cal-nav-btn" onclick="changeMonth(1)">Next →</button>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+  </div>
+
+  <!-- Day panel (opens on day click) -->
+  <div class="day-panel" id="day-panel">
+    <div class="day-panel-header">
+      <h3 id="day-panel-title"></h3>
+      <button class="day-panel-close" onclick="closeDayPanel()">✕ Close</button>
+    </div>
+    <div class="day-panel-body">
+      <div class="day-events-col">
+        <h4>Events this day</h4>
+        <div id="day-events-list"></div>
+      </div>
+      <div class="day-form-col">
+        <h4>Add an event</h4>
+        <div class="type-radio-row">
+          <button class="type-radio active" data-type="cart" onclick="setEventType('cart')">🛺 Cart Reservation</button>
+          <button class="type-radio" data-type="meeting" onclick="setEventType('meeting')">📋 Meeting</button>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Your name</label>
+          <input class="field-input" id="ev-author" type="text" placeholder="Phil" maxlength="40" />
+        </div>
+        <div class="field-group">
+          <label class="field-label" id="ev-title-label">What for? (purpose / trip)</label>
+          <input class="field-input" id="ev-title" type="text" placeholder="Sunset cruise to the marina" maxlength="100" />
+        </div>
+        <div class="field-row">
+          <div class="field-group">
+            <label class="field-label">From</label>
+            <input class="field-input" id="ev-start" type="time" />
+          </div>
+          <div class="field-group">
+            <label class="field-label">Until</label>
+            <input class="field-input" id="ev-end" type="time" />
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Notes (optional)</label>
+          <input class="field-input" id="ev-notes" type="text" maxlength="200" placeholder="Anything the group should know" />
+        </div>
+        <button class="btn-primary" onclick="saveEvent()" style="width:100%;text-align:center;">Add to Calendar →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upcoming -->
+  <div class="section-header" style="margin-top:2rem;">
+    <h2>Upcoming</h2>
+    <span id="upcoming-count">0 events</span>
+  </div>
+  <div id="upcoming-list" class="upcoming-list">
+    <div class="empty-state" style="border:none;">Nothing scheduled yet — click a day to add something ✦</div>
+  </div>
+</div>
+
+<!-- Cart reservations tab -->
+<div id="tab-cart" class="section-wrap" style="display:none;">
+  <div class="section-header">
+    <h2>Cart Reservations</h2>
+    <span>All upcoming bookings</span>
+  </div>
+  <div id="cart-list" class="upcoming-list">
+    <div class="empty-state" style="border:none;">No cart reservations yet ✦</div>
+  </div>
+</div>
+
+<!-- Meetings tab -->
+<div id="tab-meetings" class="section-wrap" style="display:none;">
+  <div class="section-header">
+    <h2>Scheduled Meetings</h2>
+    <span>All upcoming meetings</span>
+  </div>
+  <div id="meeting-cal-list" class="upcoming-list">
+    <div class="empty-state" style="border:none;">No meetings scheduled yet ✦</div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-brand">
+    <h3>The Coronado<br>Tram Experiment</h3>
+    <p>An accidental experiment in shared ownership and neighborhood community.</p>
+  </div>
+  <div class="footer-links">
+    <h4>Pages</h4>
+    <a href="index.html">Community Board</a>
+    <a href="travelogue.html">Travelogue</a>
+    <a href="meetings.html">Meetings</a>
+    <a href="schedule.html">Schedule & Cart</a>
+  </div>
+  <div class="footer-links">
+    <h4>Community</h4>
+    <a href="https://www.facebook.com" target="_blank">Facebook Group</a>
+  </div>
+  <div class="footer-note">
+    <a href="https://thegreatcoronadotram.com" style="color:inherit;text-decoration:none;">thegreatcoronadotram.com</a> · Est. 2025 · "We didn't plan this. That's the point."
+  </div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+let db = null;
+if (CONFIGURED) {
+  const { createClient } = supabase;
+  db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+
+let reservations = [];
+let calYear  = new Date().getFullYear();
+let calMonth = new Date().getMonth();
+let selectedDate = null;
+let eventType = 'cart';
+
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAYS   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+// ── Load ─────────────────────────────────────────────────────────
+async function load() {
+  if (CONFIGURED) {
+    const { data } = await db.from('reservations').select('*').order('res_date', { ascending: true });
+    reservations = data || [];
+  } else {
+    reservations = JSON.parse(localStorage.getItem('coronado-reservations') || '[]');
+  }
+  renderCalendar();
+  renderUpcoming();
+  renderFilteredLists();
+}
+
+// ── Realtime ──────────────────────────────────────────────────────
+if (CONFIGURED) {
+  const { createClient } = supabase;
+  const db2 = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  db2.channel('reservations-ch')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'reservations' }, p => {
+      if (reservations.some(r => r.id === p.new.id)) return;
+      reservations.push(p.new);
+      reservations.sort((a,b) => a.res_date.localeCompare(b.res_date));
+      renderCalendar(); renderUpcoming(); renderFilteredLists();
+      if (selectedDate) renderDayEvents(selectedDate);
+    })
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'reservations' }, p => {
+      reservations = reservations.filter(r => r.id !== p.old.id);
+      renderCalendar(); renderUpcoming(); renderFilteredLists();
+      if (selectedDate) renderDayEvents(selectedDate);
+    })
+    .subscribe();
+}
+
+// ── Tab switching ─────────────────────────────────────────────────
+function switchTab(tab) {
+  ['calendar','cart','meetings'].forEach(t => {
+    document.getElementById(`tab-${t}`).style.display = t === tab ? 'block' : 'none';
+  });
+  document.querySelectorAll('.page-tab').forEach((btn, i) => {
+    btn.classList.toggle('active', ['calendar','cart','meetings'][i] === tab);
+  });
+}
+
+// ── Calendar ──────────────────────────────────────────────────────
+function renderCalendar() {
+  document.getElementById('cal-title').textContent = `${MONTHS[calMonth]} ${calYear}`;
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = '';
+
+  DAYS.forEach(d => {
+    const lbl = document.createElement('div');
+    lbl.className = 'cal-day-label';
+    lbl.textContent = d;
+    grid.appendChild(lbl);
+  });
+
+  const firstDay    = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const today       = new Date();
+
+  for (let i = 0; i < firstDay; i++) {
+    const empty = document.createElement('div');
+    empty.className = 'cal-cell empty';
+    grid.appendChild(empty);
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear();
+    const isSelected = dateStr === selectedDate;
+    const dayEvts = reservations.filter(r => r.res_date === dateStr);
+
+    const cell = document.createElement('div');
+    cell.className = `cal-cell${isToday ? ' today' : ''}${isSelected ? ' selected' : ''}`;
+    cell.onclick = () => openDayPanel(dateStr);
+
+    let evtHtml = dayEvts.slice(0,3).map(e =>
+      `<span class="cal-evt type-${e.type}" title="${escHtml(e.title)}">${escHtml(e.title.substring(0,14))}</span>`
+    ).join('');
+    if (dayEvts.length > 3) evtHtml += `<span class="cal-evt" style="color:var(--muted);background:none;">+${dayEvts.length-3} more</span>`;
+
+    cell.innerHTML = `<span class="cal-day-num">${d}</span>${evtHtml}`;
+    grid.appendChild(cell);
+  }
+}
+
+function changeMonth(dir) {
+  calMonth += dir;
+  if (calMonth < 0)  { calMonth = 11; calYear--; }
+  if (calMonth > 11) { calMonth = 0;  calYear++; }
+  renderCalendar();
+  closeDayPanel();
+}
+
+// ── Day panel ─────────────────────────────────────────────────────
+function openDayPanel(dateStr) {
+  selectedDate = dateStr;
+  const d = new Date(dateStr + 'T12:00:00');
+  document.getElementById('day-panel-title').textContent =
+    d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  document.getElementById('day-panel').classList.add('open');
+  renderCalendar();
+  renderDayEvents(dateStr);
+}
+
+function closeDayPanel() {
+  selectedDate = null;
+  document.getElementById('day-panel').classList.remove('open');
+  renderCalendar();
+}
+
+function renderDayEvents(dateStr) {
+  const list = document.getElementById('day-events-list');
+  const dayEvts = reservations.filter(r => r.res_date === dateStr);
+  if (dayEvts.length === 0) {
+    list.innerHTML = '<div style="color:var(--muted);font-family:\'Space Mono\',monospace;font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;">Nothing booked yet</div>';
+    return;
+  }
+  list.innerHTML = dayEvts.map(e => `
+    <div class="day-event-item">
+      <div class="day-event-dot dot-${e.type}"></div>
+      <div class="day-event-info">
+        <span class="day-event-title">${escHtml(e.title)}</span>
+        <span class="day-event-meta">${escHtml(e.author)}${e.time_start ? ' · ' + e.time_start : ''}${e.time_end ? '–' + e.time_end : ''}${e.notes ? ' · ' + escHtml(e.notes) : ''}</span>
+      </div>
+      <button class="day-event-delete" onclick="deleteEvent('${e.id}')" title="Remove">✕</button>
+    </div>
+  `).join('');
+}
+
+// ── Event type ────────────────────────────────────────────────────
+function setEventType(type) {
+  eventType = type;
+  document.querySelectorAll('.type-radio').forEach(b => b.classList.toggle('active', b.dataset.type === type));
+  document.getElementById('ev-title-label').textContent =
+    type === 'cart' ? 'What for? (purpose / trip)' : 'Meeting title / agenda';
+  document.getElementById('ev-title').placeholder =
+    type === 'cart' ? 'Sunset cruise to the marina' : 'Monthly check-in';
+}
+
+// ── Save event ────────────────────────────────────────────────────
+async function saveEvent() {
+  if (!selectedDate) { showToast('Pick a day first!'); return; }
+  const author = (document.getElementById('ev-author').value || 'Anonymous').trim();
+  const title  = document.getElementById('ev-title').value.trim();
+  if (!title) { showToast('Add a title!'); return; }
+
+  // Check for cart conflicts on same day
+  if (eventType === 'cart') {
+    const start = document.getElementById('ev-start').value;
+    const end   = document.getElementById('ev-end').value;
+    const conflicts = reservations.filter(r =>
+      r.res_date === selectedDate && r.type === 'cart' &&
+      start && end && r.time_start && r.time_end &&
+      start < r.time_end && end > r.time_start
+    );
+    if (conflicts.length > 0) {
+      showToast(`Cart already booked ${conflicts[0].time_start}–${conflicts[0].time_end} by ${conflicts[0].author}`);
+      return;
+    }
+  }
+
+  const ev = {
+    id: uuid(),
+    type: eventType,
+    title,
+    author,
+    res_date: selectedDate,
+    time_start: document.getElementById('ev-start').value || null,
+    time_end:   document.getElementById('ev-end').value   || null,
+    notes:      document.getElementById('ev-notes').value.trim() || null,
+    created_at: new Date().toISOString()
+  };
+
+  reservations.push(ev);
+  reservations.sort((a,b) => a.res_date.localeCompare(b.res_date));
+  renderCalendar();
+  renderUpcoming();
+  renderFilteredLists();
+  renderDayEvents(selectedDate);
+  clearEventForm();
+  showToast(eventType === 'cart' ? 'Cart reserved ✦' : 'Meeting scheduled ✦');
+
+  if (CONFIGURED) {
+    await db.from('reservations').insert(ev);
+  } else {
+    localStorage.setItem('coronado-reservations', JSON.stringify(reservations));
+  }
+}
+
+function clearEventForm() {
+  ['ev-author','ev-title','ev-start','ev-end','ev-notes'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+}
+
+// ── Delete event ──────────────────────────────────────────────────
+async function deleteEvent(id) {
+  reservations = reservations.filter(r => r.id !== id);
+  renderCalendar();
+  renderUpcoming();
+  renderFilteredLists();
+  if (selectedDate) renderDayEvents(selectedDate);
+  showToast('Removed ✦');
+  if (CONFIGURED) {
+    await db.from('reservations').delete().eq('id', id);
+  } else {
+    localStorage.setItem('coronado-reservations', JSON.stringify(reservations));
+  }
+}
+
+// ── Upcoming list ─────────────────────────────────────────────────
+function renderUpcoming() {
+  const today = new Date().toISOString().split('T')[0];
+  const upcoming = reservations.filter(r => r.res_date >= today).slice(0, 20);
+  const list = document.getElementById('upcoming-list');
+  document.getElementById('upcoming-count').textContent = upcoming.length + ' event' + (upcoming.length === 1 ? '' : 's');
+
+  if (upcoming.length === 0) {
+    list.innerHTML = '<div class="empty-state" style="border:none;">Nothing scheduled yet — click a day to add something ✦</div>';
+    return;
+  }
+  list.innerHTML = upcoming.map(e => buildUpcomingItem(e)).join('');
+}
+
+function renderFilteredLists() {
+  const today = new Date().toISOString().split('T')[0];
+  const carts    = reservations.filter(r => r.type === 'cart'    && r.res_date >= today);
+  const meetings = reservations.filter(r => r.type === 'meeting' && r.res_date >= today);
+
+  const cartList = document.getElementById('cart-list');
+  cartList.innerHTML = carts.length === 0
+    ? '<div class="empty-state" style="border:none;">No cart reservations yet ✦</div>'
+    : carts.map(e => buildUpcomingItem(e)).join('');
+
+  const meetList = document.getElementById('meeting-cal-list');
+  meetList.innerHTML = meetings.length === 0
+    ? '<div class="empty-state" style="border:none;">No meetings scheduled yet ✦</div>'
+    : meetings.map(e => buildUpcomingItem(e)).join('');
+}
+
+function buildUpcomingItem(e) {
+  const d = new Date(e.res_date + 'T12:00:00');
+  const day = d.getDate();
+  const mon = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+  const timeStr = e.time_start ? `${e.time_start}${e.time_end ? '–' + e.time_end : ''}` : 'All day';
+  return `<div class="upcoming-item">
+    <div class="upcoming-date-block">
+      <span class="upd-day">${day}</span>
+      <span class="upd-mon">${mon}</span>
+    </div>
+    <div class="upcoming-info">
+      <span class="upcoming-title">${escHtml(e.title)}</span>
+      <span class="upcoming-meta">${escHtml(e.author)} · ${timeStr}${e.notes ? ' · ' + escHtml(e.notes) : ''}</span>
+    </div>
+    <span class="upcoming-badge badge-${e.type}">${e.type === 'cart' ? '🛺 Cart' : '📋 Meeting'}</span>
+    <button class="btn-danger" onclick="deleteEvent('${e.id}')">Remove</button>
+  </div>`;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────
+function uuid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+load();
+</script>
+</body>
+</html>

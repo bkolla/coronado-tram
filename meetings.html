@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meetings — The Coronado Tram</title>
+<link rel="stylesheet" href="style.css">
+<style>
+/* ── LAYOUT ── */
+.meetings-layout {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 0;
+  border: 2px solid var(--ink);
+  background: var(--ink);
+  min-height: 70vh;
+}
+.meetings-sidebar {
+  background: var(--sand);
+  border-right: 2px solid var(--ink);
+  display: flex;
+  flex-direction: column;
+}
+.meetings-sidebar-header {
+  padding: 1.5rem;
+  border-bottom: 2px solid var(--ink);
+  background: var(--ink);
+}
+.meetings-sidebar-header h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--gold);
+}
+.meetings-list { flex: 1; overflow-y: auto; }
+.meeting-item {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1.5px solid var(--border-solid);
+  cursor: pointer;
+  transition: background 0.15s;
+  background: var(--cream);
+}
+.meeting-item:hover { background: var(--sand); }
+.meeting-item.active { background: var(--ink); }
+.meeting-item.active .mi-title { color: var(--cream); }
+.meeting-item.active .mi-meta  { color: var(--gold); }
+.mi-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+  display: block;
+}
+.mi-meta {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.mi-has-rec {
+  display: inline-block;
+  background: var(--rust);
+  color: var(--cream);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.45rem;
+  margin-top: 0.35rem;
+}
+
+/* ── MEETING DETAIL ── */
+.meeting-detail {
+  background: var(--cream);
+  padding: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.detail-placeholder {
+  color: var(--muted);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin: auto;
+  text-align: center;
+}
+.detail-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.75rem;
+  font-weight: 900;
+}
+.detail-meta {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+}
+.detail-notes-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+.detail-notes {
+  font-size: 0.95rem;
+  line-height: 1.8;
+  color: var(--ink);
+  white-space: pre-wrap;
+  padding: 1.25rem;
+  background: var(--sand);
+  border-left: 4px solid var(--gold);
+}
+.detail-recording {
+  padding: 1rem 1.25rem;
+  background: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.detail-recording span {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.detail-recording audio { flex: 1; min-width: 200px; }
+
+/* ── ADD MEETING FORM ── */
+.add-meeting-form {
+  border: 2px solid var(--ink);
+  background: var(--cream);
+  display: none;
+  margin-bottom: 2rem;
+}
+.add-meeting-form.open { display: block; }
+.form-inner {
+  padding: 2rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+.form-inner .full { grid-column: 1 / -1; }
+.form-footer {
+  padding: 1rem 2rem;
+  border-top: 1px solid var(--border);
+  background: var(--sand);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+/* ── RECORDER ── */
+.recorder-panel {
+  border: 2px solid var(--ink);
+  background: var(--ink);
+  padding: 1.75rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+}
+.rec-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--gold);
+  flex: 1;
+  min-width: 160px;
+}
+.rec-label small { display: block; color: rgba(212,168,50,0.6); margin-top: 0.25rem; font-size: 0.55rem; }
+.rec-timer {
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--cream);
+  min-width: 80px;
+  display: none;
+}
+.rec-timer.visible { display: block; }
+.rec-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--rust);
+  animation: pulse 1s ease-in-out infinite;
+  display: none;
+}
+.rec-dot.visible { display: block; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.rec-status {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(242,234,216,0.5);
+  min-width: 100px;
+}
+#rec-audio-out { display: none; margin-top: 0; }
+#rec-download { display: none; }
+
+@media (max-width: 900px) {
+  .meetings-layout { grid-template-columns: 1fr; }
+  .meetings-sidebar { border-right: none; border-bottom: 2px solid var(--ink); max-height: 40vh; }
+  .form-inner { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <nav class="nav-left">
+    <a href="index.html">Board</a>
+    <a href="travelogue.html">Travelogue</a>
+    <a href="meetings.html" class="active">Meetings</a>
+  </nav>
+  <a class="masthead-title" href="index.html">The <span>Coronado</span> Tram</a>
+  <nav class="nav-right">
+    <a href="schedule.html">Schedule & Cart</a>
+    <a href="https://www.facebook.com" target="_blank">Facebook</a>
+  </nav>
+</header>
+
+<div class="page-hero">
+  <div>
+    <div class="page-hero-label">Minutes & Records</div>
+    <h1>Tram <em>Meetings</em></h1>
+    <p>Record meetings, add notes, and keep a searchable history of every group decision.</p>
+  </div>
+  <button class="btn-primary" onclick="toggleForm()">+ Log a Meeting</button>
+</div>
+
+<section class="section-wrap">
+
+  <!-- Recorder -->
+  <div class="recorder-panel">
+    <div class="rec-label">
+      🎙 Meeting Recorder
+      <small>Records in your browser · saves as a downloadable file</small>
+    </div>
+    <div class="rec-dot" id="rec-dot"></div>
+    <div class="rec-timer" id="rec-timer">00:00</div>
+    <div class="rec-status" id="rec-status">Ready</div>
+    <audio id="rec-audio-out" controls></audio>
+    <a id="rec-download" class="btn-ghost" style="color:var(--cream);border-color:rgba(255,255,255,0.3);">⬇ Download</a>
+    <button id="rec-start" class="btn-primary" style="background:var(--rust);border-color:var(--rust);" onclick="startRecording()">● Start Recording</button>
+    <button id="rec-stop" class="btn-primary" style="display:none;" onclick="stopRecording()">■ Stop</button>
+  </div>
+
+  <!-- Add meeting form -->
+  <div class="add-meeting-form" id="add-form">
+    <div class="form-inner">
+      <div class="field-group">
+        <label class="field-label">Meeting title</label>
+        <input class="field-input" id="m-title" type="text" placeholder="Monthly Check-in" maxlength="100" />
+      </div>
+      <div class="field-group">
+        <label class="field-label">Date</label>
+        <input class="field-input" id="m-date" type="date" />
+      </div>
+      <div class="field-group">
+        <label class="field-label">Time</label>
+        <input class="field-input" id="m-time" type="time" />
+      </div>
+      <div class="field-group">
+        <label class="field-label">Who attended</label>
+        <input class="field-input" id="m-attendees" type="text" placeholder="Phil, Sarah, Marcus…" maxlength="200" />
+      </div>
+      <div class="field-group full">
+        <label class="field-label">Meeting notes / minutes</label>
+        <textarea class="field-textarea" id="m-notes" placeholder="What was discussed? What was decided? Any action items?" maxlength="5000" style="min-height:160px;"></textarea>
+      </div>
+    </div>
+    <div class="form-footer">
+      <button class="btn-ghost" onclick="toggleForm()">Cancel</button>
+      <button class="btn-primary" onclick="saveMeeting()">Save Meeting Notes →</button>
+    </div>
+  </div>
+
+  <!-- Meetings list + detail -->
+  <div class="meetings-layout" id="meetings-layout">
+    <div class="meetings-sidebar">
+      <div class="meetings-sidebar-header">
+        <h3>All Meetings</h3>
+      </div>
+      <div class="meetings-list" id="meetings-list">
+        <div style="padding:2rem;text-align:center;font-family:'Space Mono',monospace;font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);">No meetings yet</div>
+      </div>
+    </div>
+    <div class="meeting-detail" id="meeting-detail">
+      <div class="detail-placeholder">Select a meeting to view notes ✦</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-brand">
+    <h3>The Coronado<br>Tram Experiment</h3>
+    <p>An accidental experiment in shared ownership and neighborhood community.</p>
+  </div>
+  <div class="footer-links">
+    <h4>Pages</h4>
+    <a href="index.html">Community Board</a>
+    <a href="travelogue.html">Travelogue</a>
+    <a href="meetings.html">Meetings</a>
+    <a href="schedule.html">Schedule & Cart</a>
+  </div>
+  <div class="footer-links">
+    <h4>Community</h4>
+    <a href="https://www.facebook.com" target="_blank">Facebook Group</a>
+  </div>
+  <div class="footer-note">
+    <a href="https://thegreatcoronadotram.com" style="color:inherit;text-decoration:none;">thegreatcoronadotram.com</a> · Est. 2025 · "We didn't plan this. That's the point."
+  </div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+let db = null;
+if (CONFIGURED) {
+  const { createClient } = supabase;
+  db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+
+let meetings = [];
+let activeMeetingId = null;
+
+// ── Load ─────────────────────────────────────────────────────────
+async function load() {
+  if (CONFIGURED) {
+    const { data } = await db.from('meetings').select('*').order('meeting_date', { ascending: false });
+    meetings = data || [];
+  } else {
+    meetings = JSON.parse(localStorage.getItem('coronado-meetings') || '[]');
+  }
+  renderList();
+}
+
+// ── Realtime ──────────────────────────────────────────────────────
+if (CONFIGURED) {
+  const { createClient } = supabase;
+  const db2 = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  db2.channel('meetings-ch').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'meetings' }, p => {
+    if (meetings.some(m => m.id === p.new.id)) return;
+    meetings.unshift(p.new);
+    renderList();
+  }).subscribe();
+}
+
+// ── Toggle form ───────────────────────────────────────────────────
+function toggleForm() {
+  document.getElementById('add-form').classList.toggle('open');
+}
+
+// ── Save meeting ──────────────────────────────────────────────────
+async function saveMeeting() {
+  const title = document.getElementById('m-title').value.trim();
+  const date  = document.getElementById('m-date').value;
+  if (!title || !date) { showToast('Add a title and date!'); return; }
+
+  const m = {
+    id: uuid(),
+    title,
+    meeting_date: date,
+    meeting_time: document.getElementById('m-time').value,
+    attendees: document.getElementById('m-attendees').value.trim(),
+    notes: document.getElementById('m-notes').value.trim(),
+    created_at: new Date().toISOString()
+  };
+
+  meetings.unshift(m);
+  renderList();
+  showDetail(m);
+  resetForm();
+  showToast('Meeting saved ✦');
+
+  if (CONFIGURED) {
+    await db.from('meetings').insert(m);
+  } else {
+    localStorage.setItem('coronado-meetings', JSON.stringify(meetings));
+  }
+}
+
+function resetForm() {
+  ['m-title','m-date','m-time','m-attendees','m-notes'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('add-form').classList.remove('open');
+}
+
+// ── Render list ───────────────────────────────────────────────────
+function renderList() {
+  const list = document.getElementById('meetings-list');
+  list.innerHTML = '';
+  if (meetings.length === 0) {
+    list.innerHTML = '<div style="padding:2rem;text-align:center;font-family:\'Space Mono\',monospace;font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);">No meetings yet</div>';
+    return;
+  }
+  meetings.forEach(m => {
+    const div = document.createElement('div');
+    div.className = `meeting-item${m.id === activeMeetingId ? ' active' : ''}`;
+    div.onclick = () => showDetail(m);
+    const dateStr = m.meeting_date
+      ? new Date(m.meeting_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      : '';
+    div.innerHTML = `
+      <span class="mi-title">${escHtml(m.title)}</span>
+      <span class="mi-meta">${dateStr}${m.attendees ? ' · ' + m.attendees.split(',').length + ' attended' : ''}</span>
+    `;
+    list.appendChild(div);
+  });
+}
+
+// ── Show detail ───────────────────────────────────────────────────
+function showDetail(m) {
+  activeMeetingId = m.id;
+  renderList();
+
+  const dateStr = m.meeting_date
+    ? new Date(m.meeting_date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+    : '';
+
+  const detail = document.getElementById('meeting-detail');
+  detail.innerHTML = `
+    <div class="detail-title">${escHtml(m.title)}</div>
+    <div class="detail-meta">
+      <span>📅 ${dateStr}</span>
+      ${m.meeting_time ? `<span>🕐 ${m.meeting_time}</span>` : ''}
+      ${m.attendees ? `<span>👥 ${escHtml(m.attendees)}</span>` : ''}
+    </div>
+    ${m.notes ? `
+      <div>
+        <div class="detail-notes-label">Meeting Notes</div>
+        <div class="detail-notes">${escHtml(m.notes)}</div>
+      </div>
+    ` : '<div style="color:var(--muted);font-size:0.9rem;">No notes recorded.</div>'}
+  `;
+}
+
+// ── Audio recorder ────────────────────────────────────────────────
+let mediaRecorder = null;
+let audioChunks   = [];
+let recInterval   = null;
+let recSecs       = 0;
+
+async function startRecording() {
+  if (!navigator.mediaDevices) { showToast('Microphone not available in this browser'); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
+    mediaRecorder = new MediaRecorder(stream, { mimeType });
+    audioChunks = [];
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+      const url  = URL.createObjectURL(blob);
+      const audio = document.getElementById('rec-audio-out');
+      audio.src = url; audio.style.display = 'block';
+      const dl = document.getElementById('rec-download');
+      dl.href = url;
+      dl.download = `tram-meeting-${new Date().toISOString().split('T')[0]}.${mimeType.includes('webm') ? 'webm' : 'ogg'}`;
+      dl.style.display = 'inline-block';
+      stream.getTracks().forEach(t => t.stop());
+    };
+    mediaRecorder.start(500);
+    recSecs = 0;
+    clearInterval(recInterval);
+    recInterval = setInterval(() => {
+      recSecs++;
+      const m = Math.floor(recSecs / 60), s = recSecs % 60;
+      document.getElementById('rec-timer').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    }, 1000);
+    document.getElementById('rec-start').style.display = 'none';
+    document.getElementById('rec-stop').style.display = 'inline-block';
+    document.getElementById('rec-timer').classList.add('visible');
+    document.getElementById('rec-dot').classList.add('visible');
+    document.getElementById('rec-status').textContent = 'Recording…';
+  } catch(e) {
+    showToast('Microphone access denied');
+  }
+}
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+    clearInterval(recInterval);
+    document.getElementById('rec-start').style.display = 'inline-block';
+    document.getElementById('rec-stop').style.display = 'none';
+    document.getElementById('rec-dot').classList.remove('visible');
+    document.getElementById('rec-status').textContent = 'Saved ✦';
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────
+function uuid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+load();
+</script>
+</body>
+</html>

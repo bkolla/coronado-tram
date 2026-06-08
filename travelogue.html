@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Travelogue — The Coronado Tram</title>
+<link rel="stylesheet" href="style.css">
+<style>
+/* ── UPLOAD PANEL ── */
+.upload-toggle {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 2rem;
+}
+.upload-form {
+  border: 2px solid var(--ink);
+  background: var(--cream);
+  margin-bottom: 2.5rem;
+  display: none;
+}
+.upload-form.open { display: block; }
+.upload-form-inner {
+  padding: 2rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+.upload-form-inner .full { grid-column: 1 / -1; }
+.upload-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+  border-top: 1px solid var(--border);
+  background: var(--sand);
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.media-type-toggle {
+  display: flex;
+  border: 2px solid var(--ink);
+  background: var(--ink);
+  gap: 1px;
+  width: fit-content;
+  margin-bottom: 1.25rem;
+}
+.media-type-btn {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.6rem 1.25rem;
+  background: var(--cream);
+  color: var(--muted);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.media-type-btn.active { background: var(--ink); color: var(--gold); }
+
+/* ── PHOTO DROPZONE ── */
+.dropzone {
+  border: 2px dashed var(--border-solid);
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  background: var(--sand);
+}
+.dropzone:hover, .dropzone.drag-over { border-color: var(--rust); }
+.dropzone-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.dropzone-preview {
+  max-height: 160px;
+  max-width: 100%;
+  object-fit: contain;
+  display: none;
+  margin: 1rem auto 0;
+}
+#photo-file { display: none; }
+
+/* ── MEDIA GRID ── */
+.media-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  background: var(--ink);
+  border: 2px solid var(--ink);
+}
+.media-card {
+  background: var(--cream);
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+.media-card:hover .media-overlay { opacity: 1; }
+.media-thumb {
+  width: 100%;
+  aspect-ratio: 4/3;
+  object-fit: cover;
+  display: block;
+}
+.media-iframe-wrap {
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: var(--ink);
+}
+.media-iframe-wrap iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+.media-overlay {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: linear-gradient(transparent, rgba(26,18,8,0.88));
+  padding: 1.5rem 1rem 1rem;
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+.media-event {
+  font-family: 'Playfair Display', serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--cream);
+  display: block;
+  margin-bottom: 0.2rem;
+}
+.media-meta {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(242,234,216,0.7);
+}
+.media-badge {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.55rem;
+}
+.badge-photo { background: #8B7FD4; color: var(--cream); }
+.badge-video { background: var(--rust); color: var(--cream); }
+
+/* ── LIGHTBOX ── */
+.lightbox {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(26,18,8,0.92);
+  z-index: 9000;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+.lightbox.open { display: flex; }
+.lightbox-inner {
+  max-width: 900px;
+  width: 100%;
+  background: var(--ink);
+  border: 2px solid var(--gold);
+}
+.lightbox-media { width: 100%; display: block; max-height: 70vh; object-fit: contain; }
+.lightbox-video { width: 100%; aspect-ratio: 16/9; border: none; }
+.lightbox-info {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.lightbox-title { font-family: 'Playfair Display', serif; font-size: 1.25rem; font-weight: 700; color: var(--cream); }
+.lightbox-sub { font-family: 'Space Mono', monospace; font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(242,234,216,0.6); margin-top: 0.25rem; }
+.lightbox-close {
+  background: var(--rust);
+  color: var(--cream);
+  border: none;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.6rem 1.25rem;
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .media-grid { grid-template-columns: repeat(2, 1fr); }
+  .upload-form-inner { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .media-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <nav class="nav-left">
+    <a href="index.html">Board</a>
+    <a href="travelogue.html" class="active">Travelogue</a>
+    <a href="meetings.html">Meetings</a>
+  </nav>
+  <a class="masthead-title" href="index.html">The <span>Coronado</span> Tram</a>
+  <nav class="nav-right">
+    <a href="schedule.html">Schedule & Cart</a>
+    <a href="https://www.facebook.com" target="_blank">Facebook</a>
+  </nav>
+</header>
+
+<div class="page-hero">
+  <div>
+    <div class="page-hero-label">Memories in Motion</div>
+    <h1>The <em>Travelogue</em></h1>
+    <p>Photos and videos from rides, events, and everything the tram makes possible.</p>
+  </div>
+  <button class="btn-primary" onclick="toggleUpload()">+ Add a Memory</button>
+</div>
+
+<section class="section-wrap" id="gallery">
+
+  <!-- Upload form -->
+  <div class="upload-form" id="upload-form">
+    <div class="upload-form-inner">
+      <div class="field-group">
+        <label class="field-label">Your name</label>
+        <input class="field-input" id="ul-author" type="text" placeholder="Phil" maxlength="40" />
+      </div>
+      <div class="field-group">
+        <label class="field-label">Event / occasion</label>
+        <input class="field-input" id="ul-event" type="text" placeholder="Saturday Night Cruise" maxlength="80" />
+      </div>
+      <div class="field-group">
+        <label class="field-label">Date of event</label>
+        <input class="field-input" id="ul-date" type="date" />
+      </div>
+      <div class="field-group full">
+        <label class="field-label">Caption / description</label>
+        <textarea class="field-textarea" id="ul-desc" placeholder="What happened? Who was there? What made it memorable?" maxlength="500" style="min-height:70px;"></textarea>
+      </div>
+      <div class="full">
+        <div class="media-type-toggle">
+          <button class="media-type-btn active" data-type="photo" onclick="setMediaType('photo')">📷 Photo</button>
+          <button class="media-type-btn" data-type="video" onclick="setMediaType('video')">🎥 Video</button>
+        </div>
+        <!-- Photo upload -->
+        <div id="photo-section">
+          <label class="dropzone" for="photo-file" id="dropzone">
+            <div class="dropzone-label">Click to choose a photo, or drag & drop</div>
+            <img class="dropzone-preview" id="photo-dropzone-preview" alt="preview" />
+          </label>
+          <input type="file" id="photo-file" accept="image/*" onchange="onPhotoSelect(event)" />
+        </div>
+        <!-- Video URL -->
+        <div id="video-section" style="display:none;">
+          <label class="field-label">YouTube or Vimeo URL</label>
+          <input class="field-input" id="ul-video-url" type="url" placeholder="https://youtube.com/watch?v=..." />
+        </div>
+      </div>
+    </div>
+    <div class="upload-footer">
+      <button class="btn-ghost" onclick="toggleUpload()">Cancel</button>
+      <button class="btn-primary" onclick="submitMedia()">Add to Travelogue →</button>
+    </div>
+  </div>
+
+  <!-- Grid -->
+  <div class="media-grid" id="media-grid">
+    <div class="empty-state" id="empty-state" style="grid-column:1/-1;border:none;">No memories yet — add the first one ✦</div>
+  </div>
+</section>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+  <div class="lightbox-inner" id="lightbox-inner">
+    <div id="lightbox-media-slot"></div>
+    <div class="lightbox-info">
+      <div>
+        <div class="lightbox-title" id="lb-title"></div>
+        <div class="lightbox-sub" id="lb-sub"></div>
+      </div>
+      <button class="lightbox-close" onclick="closeLightbox()">✕ Close</button>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-brand">
+    <h3>The Coronado<br>Tram Experiment</h3>
+    <p>An accidental experiment in shared ownership and neighborhood community.</p>
+  </div>
+  <div class="footer-links">
+    <h4>Pages</h4>
+    <a href="index.html">Community Board</a>
+    <a href="travelogue.html">Travelogue</a>
+    <a href="meetings.html">Meetings</a>
+    <a href="schedule.html">Schedule & Cart</a>
+  </div>
+  <div class="footer-links">
+    <h4>Community</h4>
+    <a href="https://www.facebook.com" target="_blank">Facebook Group</a>
+  </div>
+  <div class="footer-note">
+    <a href="https://thegreatcoronadotram.com" style="color:inherit;text-decoration:none;">thegreatcoronadotram.com</a> · Est. 2025 · "We didn't plan this. That's the point."
+  </div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+let db = null;
+if (CONFIGURED) {
+  const { createClient } = supabase;
+  db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+
+let items = [];
+let mediaType = 'photo';
+let pendingPhoto = null;
+
+// ── Load ─────────────────────────────────────────────────────────
+async function load() {
+  if (CONFIGURED) {
+    const { data } = await db.from('travelogue').select('*').order('event_date', { ascending: false });
+    items = data || [];
+  } else {
+    items = JSON.parse(localStorage.getItem('coronado-travelogue') || '[]');
+  }
+  render();
+}
+
+// ── Realtime ──────────────────────────────────────────────────────
+if (CONFIGURED) {
+  const { createClient } = supabase;
+  const db2 = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  db2.channel('travelogue').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'travelogue' }, p => {
+    if (items.some(i => i.id === p.new.id)) return;
+    items.unshift(p.new);
+    render();
+  }).subscribe();
+}
+
+// ── Toggle form ───────────────────────────────────────────────────
+function toggleUpload() {
+  document.getElementById('upload-form').classList.toggle('open');
+}
+
+// ── Media type ────────────────────────────────────────────────────
+function setMediaType(type) {
+  mediaType = type;
+  document.querySelectorAll('.media-type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === type));
+  document.getElementById('photo-section').style.display = type === 'photo' ? 'block' : 'none';
+  document.getElementById('video-section').style.display = type === 'video' ? 'block' : 'none';
+}
+
+// ── Photo select ──────────────────────────────────────────────────
+function onPhotoSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  compressImage(file, 1200, 0.8).then(data => {
+    pendingPhoto = data;
+    const prev = document.getElementById('photo-dropzone-preview');
+    prev.src = data;
+    prev.style.display = 'block';
+  });
+}
+
+function compressImage(file, maxW, quality) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxW / img.width);
+        const canvas = document.createElement('canvas');
+        canvas.width  = img.width  * scale;
+        canvas.height = img.height * scale;
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// ── Parse video URL ───────────────────────────────────────────────
+function getEmbedUrl(url) {
+  let m = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (m) return `https://www.youtube.com/embed/${m[1]}`;
+  m = url.match(/vimeo\.com\/(\d+)/);
+  if (m) return `https://player.vimeo.com/video/${m[1]}`;
+  return null;
+}
+
+// ── Submit ────────────────────────────────────────────────────────
+async function submitMedia() {
+  const author     = (document.getElementById('ul-author').value || 'Anonymous').trim();
+  const event_title = document.getElementById('ul-event').value.trim();
+  const event_date  = document.getElementById('ul-date').value;
+  const description = document.getElementById('ul-desc').value.trim();
+
+  if (!event_title) { showToast('Add an event name!'); return; }
+
+  const item = {
+    id: uuid(),
+    author, event_title, event_date, description,
+    media_type: mediaType,
+    image_data: null,
+    video_url: null,
+    embed_url: null,
+    created_at: new Date().toISOString()
+  };
+
+  if (mediaType === 'photo') {
+    if (!pendingPhoto) { showToast('Choose a photo first!'); return; }
+    item.image_data = pendingPhoto;
+  } else {
+    const rawUrl = document.getElementById('ul-video-url').value.trim();
+    const embed  = getEmbedUrl(rawUrl);
+    if (!embed) { showToast('Paste a valid YouTube or Vimeo URL'); return; }
+    item.video_url = rawUrl;
+    item.embed_url = embed;
+  }
+
+  items.unshift(item);
+  render();
+  resetForm();
+  showToast('Added to the travelogue ✦');
+
+  if (CONFIGURED) {
+    await db.from('travelogue').insert(item);
+  } else {
+    localStorage.setItem('coronado-travelogue', JSON.stringify(items));
+  }
+}
+
+function resetForm() {
+  ['ul-author','ul-event','ul-date','ul-desc','ul-video-url'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  pendingPhoto = null;
+  const prev = document.getElementById('photo-dropzone-preview');
+  prev.src = ''; prev.style.display = 'none';
+  document.getElementById('photo-file').value = '';
+  setMediaType('photo');
+  document.getElementById('upload-form').classList.remove('open');
+}
+
+// ── Render grid ───────────────────────────────────────────────────
+function render() {
+  const grid = document.getElementById('media-grid');
+  grid.querySelectorAll('.media-card').forEach(el => el.remove());
+  const empty = document.getElementById('empty-state');
+
+  if (items.length === 0) { empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  items.forEach(item => grid.appendChild(buildCard(item)));
+}
+
+function buildCard(item) {
+  const div = document.createElement('div');
+  div.className = 'media-card';
+  div.onclick = () => openLightbox(item);
+
+  const dateStr = item.event_date
+    ? new Date(item.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : '';
+
+  let mediaHtml = '';
+  if (item.media_type === 'photo' && item.image_data) {
+    mediaHtml = `<img class="media-thumb" src="${item.image_data}" alt="${escHtml(item.event_title)}" loading="lazy" />`;
+  } else if (item.media_type === 'video' && item.embed_url) {
+    mediaHtml = `<div class="media-iframe-wrap">
+      <iframe src="${item.embed_url}" allowfullscreen loading="lazy" title="${escHtml(item.event_title)}"></iframe>
+    </div>`;
+  }
+
+  div.innerHTML = `
+    ${mediaHtml}
+    <span class="media-badge badge-${item.media_type}">${item.media_type === 'photo' ? '📷' : '🎥'} ${item.media_type}</span>
+    <div class="media-overlay">
+      <span class="media-event">${escHtml(item.event_title)}</span>
+      <span class="media-meta">${escHtml(item.author)} · ${dateStr}</span>
+    </div>
+  `;
+  return div;
+}
+
+// ── Lightbox ──────────────────────────────────────────────────────
+function openLightbox(item) {
+  const dateStr = item.event_date
+    ? new Date(item.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : '';
+
+  const slot = document.getElementById('lightbox-media-slot');
+  if (item.media_type === 'photo' && item.image_data) {
+    slot.innerHTML = `<img class="lightbox-media" src="${item.image_data}" alt="${escHtml(item.event_title)}" />`;
+  } else if (item.embed_url) {
+    slot.innerHTML = `<iframe class="lightbox-video" src="${item.embed_url}" allowfullscreen></iframe>`;
+  }
+
+  document.getElementById('lb-title').textContent = item.event_title;
+  document.getElementById('lb-sub').textContent = `${item.author} · ${dateStr}${item.description ? ' — ' + item.description : ''}`;
+  document.getElementById('lightbox').classList.add('open');
+}
+
+function closeLightbox(e) {
+  if (!e || e.target === document.getElementById('lightbox') || e.target.classList.contains('lightbox-close')) {
+    document.getElementById('lightbox').classList.remove('open');
+    document.getElementById('lightbox-media-slot').innerHTML = '';
+  }
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox({}); });
+
+// ── Drag & drop ───────────────────────────────────────────────────
+const dz = document.getElementById('dropzone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault();
+  dz.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) {
+    compressImage(file, 1200, 0.8).then(data => {
+      pendingPhoto = data;
+      const prev = document.getElementById('photo-dropzone-preview');
+      prev.src = data; prev.style.display = 'block';
+    });
+  }
+});
+
+function uuid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+load();
+</script>
+</body>
+</html>
