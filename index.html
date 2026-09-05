@@ -63,7 +63,7 @@ nav a {
   font-size: 0.62rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--ink);
   text-decoration: none;
   transition: color 0.2s;
 }
@@ -748,8 +748,8 @@ footer {
 
 /* ── RESPONSIVE ── */
 @media (max-width: 900px) {
-  header { grid-template-columns: 1fr; padding: 1rem 5vw; }
-  .nav-left,.nav-right { display: none; }
+  header { grid-template-columns: 1fr; padding: 1rem 5vw; row-gap: 0.6rem; }
+  .nav-left,.nav-right { justify-content: center; flex-wrap: wrap; gap: 1rem 1.5rem; }
   .hero { grid-template-columns: 1fr; min-height: auto; }
   .hero-left { padding: 12vw 7vw; border-right: none; border-bottom: 2px solid var(--ink); }
   .hero-right { min-height: 50vw; }
