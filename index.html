@@ -68,6 +68,14 @@ nav a {
   transition: color 0.2s;
 }
 nav a:hover { color: var(--rust); }
+.auth-widget { display: flex; align-items: center; gap: 0.6rem; }
+.auth-name {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
 
 .masthead-title {
   text-align: center;
@@ -345,6 +353,7 @@ nav a:hover { color: var(--rust); }
   width: 200px;
 }
 .name-input::placeholder { color: var(--muted); }
+.name-input[readonly] { color: var(--rust); cursor: default; }
 
 .type-select {
   font-family: 'Space Mono', monospace;
@@ -748,8 +757,18 @@ footer {
 
 /* ── RESPONSIVE ── */
 @media (max-width: 900px) {
-  header { grid-template-columns: 1fr; padding: 1rem 5vw; row-gap: 0.6rem; }
-  .nav-left,.nav-right { justify-content: center; flex-wrap: wrap; gap: 1rem 1.5rem; }
+  header {
+    grid-template-columns: unset;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem 5vw;
+    row-gap: 0.6rem;
+    column-gap: 1.25rem;
+  }
+  .masthead-title { order: -1; flex-basis: 100%; }
+  .nav-left,.nav-right { display: contents; }
   .hero { grid-template-columns: 1fr; min-height: auto; }
   .hero-left { padding: 12vw 7vw; border-right: none; border-bottom: 2px solid var(--ink); }
   .hero-right { min-height: 50vw; }
@@ -775,6 +794,7 @@ footer {
   <nav class="nav-right">
     <a href="schedule.html">Schedule & Cart</a>
     <a href="https://www.facebook.com" target="_blank">Facebook</a>
+    <span class="auth-widget" id="auth-widget"></span>
   </nav>
 </header>
 
@@ -881,7 +901,7 @@ footer {
 
   <!-- Setup banner (shown when Supabase is not yet configured) -->
   <div class="setup-banner" id="setup-banner">
-    <strong>⚙️ Local mode</strong> — posts save to this browser only. To share posts with all 12 neighbors, follow the Supabase setup instructions in the HTML file (search for SUPABASE_URL).
+    <strong>⚙️ Local mode</strong> — posts save to this browser only. To share posts with all 12 neighbors, follow the Supabase setup instructions in the comment above the config.js include (search for SUPABASE SETUP), then paste credentials into config.js.
   </div>
 
   <!-- Tabs -->
@@ -1075,14 +1095,10 @@ footer {
   ═══════════════════════════════════════════════════════════════════
 -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="auth.js"></script>
 <script>
 
-// ── Paste your Supabase credentials here ─────────────────────────
-const SUPABASE_URL      = 'https://xujxgbaszjhsaenddaom.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1anhnYmFzempoc2FlbmRkYW9tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyNzg2NDMsImV4cCI6MjA5NTg1NDY0M30.XmbheUzP5461g45NEd2MkgofUoszxaRfPCgWKdX8eAA';
-// ─────────────────────────────────────────────────────────────────
-
-const CONFIGURED = !SUPABASE_URL.includes('YOUR_PROJECT_ID');
 let db = null;
 
 if (CONFIGURED) {
@@ -1091,6 +1107,23 @@ if (CONFIGURED) {
 } else {
   document.getElementById('setup-banner').classList.add('visible');
 }
+
+// ── Signed-in identity replaces the free-text name field ───────────
+function applyAuthToNameField(user) {
+  const input = document.getElementById('author-name');
+  if (!input) return;
+  const signedInName = user?.user_metadata?.full_name || user?.user_metadata?.name;
+  if (signedInName) {
+    input.value = signedInName;
+    input.readOnly = true;
+    input.title = 'Signed in with Google — posting as ' + signedInName;
+  } else {
+    input.readOnly = false;
+    input.title = '';
+  }
+}
+document.addEventListener('coronado-auth-change', e => applyAuthToNameField(e.detail));
+applyAuthToNameField(window.coronadoAuth?.user);
 
 // ── State ─────────────────────────────────────────────────────────
 let posts = [];

@@ -298,6 +298,7 @@
   <nav class="nav-right">
     <a href="schedule.html" class="active">Schedule & Cart</a>
     <a href="https://www.facebook.com" target="_blank">Facebook</a>
+    <span class="auth-widget" id="auth-widget"></span>
   </nav>
 </header>
 
@@ -430,12 +431,30 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
+<script src="auth.js"></script>
 <script>
 let db = null;
 if (CONFIGURED) {
   const { createClient } = supabase;
   db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
+
+// ── Signed-in identity replaces the free-text name field ───────────
+function applyAuthToNameField(user) {
+  const input = document.getElementById('ev-author');
+  if (!input) return;
+  const signedInName = user?.user_metadata?.full_name || user?.user_metadata?.name;
+  if (signedInName) {
+    input.value = signedInName;
+    input.readOnly = true;
+    input.title = 'Signed in with Google — reserving as ' + signedInName;
+  } else {
+    input.readOnly = false;
+    input.title = '';
+  }
+}
+document.addEventListener('coronado-auth-change', e => applyAuthToNameField(e.detail));
+applyAuthToNameField(window.coronadoAuth?.user);
 
 let reservations = [];
 let calYear  = new Date().getFullYear();
@@ -637,9 +656,11 @@ async function saveEvent() {
 }
 
 function clearEventForm() {
-  ['ev-author','ev-title','ev-start','ev-end','ev-notes'].forEach(id => {
+  ['ev-title','ev-start','ev-end','ev-notes'].forEach(id => {
     document.getElementById(id).value = '';
   });
+  // ev-author is cleared only when signed out — signed-in users keep their name locked in
+  if (!window.coronadoAuth?.user) document.getElementById('ev-author').value = '';
 }
 
 // ── Delete event ──────────────────────────────────────────────────
